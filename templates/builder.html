@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description"
+        content="AI Career Toolkit — Build a structured, ATS-ready resume with our guided resume builder." />
+    <title>Resume Builder — AI Career Toolkit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { inter: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { DEFAULT: '#2563EB', dark: '#1D4ED8', light: '#EFF6FF' },
+                        surface: '#F9FAFB',
+                        card: '#FFFFFF',
+                        border: '#E5E7EB',
+                        txt: { primary: '#111827', secondary: '#6B7280', muted: '#9CA3AF' },
+                        success: '#16A34A', warning: '#D97706', danger: '#DC2626'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .field-label {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.875rem;
+            color: #9CA3AF;
+            transition: all 0.2s ease;
+            pointer-events: none;
+        }
+
+        .field-input:focus~.field-label,
+        .field-input:not(:placeholder-shown)~.field-label {
+            top: 6px;
+            font-size: 0.7rem;
+            color: #2563EB;
+            transform: none;
+        }
+
+        .field-input {
+            padding-top: 20px;
+            padding-bottom: 6px;
+        }
+
+        .field-wrapper {
+            position: relative;
+        }
+
+        textarea.field-input {
+            padding-top: 24px;
+        }
+
+        textarea~.field-label {
+            top: 14px;
+            transform: none;
+        }
+
+        textarea:focus~.field-label,
+        textarea:not(:placeholder-shown)~.field-label {
+            top: 6px;
+        }
+
+        @keyframes fadeSlide {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-slide {
+            animation: fadeSlide 0.4s ease-out both;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner {
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+</head>
+
+<body class="bg-surface text-txt-primary antialiased">
+
+    <!-- ── Navbar ── -->
+    <nav class="bg-card border-b border-border sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="/" class="text-txt-primary font-semibold text-lg tracking-tight">AI Career Toolkit</a>
+            <div class="flex items-center gap-6">
+                <a href="/builder" class="text-sm text-brand font-medium">Build Resume</a>
+                <a href="/analyze" class="text-sm text-txt-secondary hover:text-txt-primary transition-colors">Analyze
+                    Resume</a>
+                <a href="/analyze"
+                    class="bg-brand text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-brand-dark transition-all hover:scale-[1.02]">Analyze
+                    Now</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── Page Header ── -->
+    <div class="border-b border-border bg-card py-8">
+        <div class="max-w-6xl mx-auto px-6">
+            <h1 class="text-2xl font-semibold text-txt-primary tracking-tight">Resume Builder</h1>
+            <p class="text-txt-secondary text-sm mt-1">Fill in your details below. All fields are saved locally in your
+                session.</p>
+        </div>
+    </div>
+
+    <!-- ── Main Content ── -->
+    <main x-data="{ 
+    form: {
+      name: '', email: '', phone: '', location: '',
+      summary: '', experience: '', education: '', skills: ''
+    },
+    loading: false,
+    error: null,
+    success: null,
+    charCount(field, max) { return (this.form[field] || '').length + ' / ' + max },
+    async submit() {
+      this.loading = true;
+      this.error = null;
+      this.success = null;
+      const missing = [];
+      if (!this.form.name.trim()) missing.push('Name');
+      if (!this.form.summary.trim()) missing.push('Summary');
+      if (!this.form.skills.trim()) missing.push('Skills');
+      if (missing.length) {
+        this.error = 'Please complete required fields: ' + missing.join(', ') + '.';
+        this.loading = false;
+        return;
+      }
+      try {
+        const res = await fetch('/build-resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.form)
+        });
+        const data = await res.json();
+        if (data.success) {
+          this.success = data;
+        } else {
+          this.error = data.error || 'An unexpected error occurred.';
+        }
+      } catch (e) {
+        this.error = 'Could not reach the server. Please check your connection.';
+      }
+      this.loading = false;
+    }
+  }" class="max-w-6xl mx-auto px-6 py-10">
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+
+            <!-- ──── LEFT: Form ──── -->
+            <div class="lg:col-span-3 space-y-6 fade-slide">
+
+                <!-- Error State -->
+                <div x-show="error" x-transition
+                    class="bg-red-50 border border-red-200 rounded-lg px-5 py-4 flex items-start gap-3">
+                    <svg class="w-5 h-5 text-danger mt-0.5 flex-shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-sm text-danger font-medium" x-text="error"></p>
+                </div>
+
+                <!-- Success State -->
+                <div x-show="success" x-transition
+                    class="bg-green-50 border border-green-200 rounded-lg px-5 py-4 flex items-start gap-3">
+                    <svg class="w-5 h-5 text-success mt-0.5 flex-shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-sm text-success font-medium">Resume generated successfully. Review the preview on the
+                        right.</p>
+                </div>
+
+                <!-- Personal Info -->
+                <div class="bg-card border border-border rounded-xl p-6">
+                    <h2 class="text-sm font-semibold text-txt-primary mb-5 pb-4 border-b border-border">Personal
+                        Information</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                        <div class="field-wrapper">
+                            <input id="name" type="text" x-model="form.name" placeholder=" "
+                                class="field-input w-full border border-border rounded-lg px-3 text-sm text-txt-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition bg-white h-12" />
+                            <label for="name" class="field-label">Full Name <span class="text-danger">*</span></label>
+                        </div>
+
+                        <div class="field-wrapper">
+                            <input id="email" type="email" x-model="form.email" placeholder=" "
+                                class="field-input w-full border border-border rounded-lg px-3 text-sm text-txt-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition bg-white h-12" />
+                            <label for="email" class="field-label">Email Address</label>
+                        </div>
+
+                        <div class="field-wrapper">
+                            <input id="phone" type="tel" x-model="form.phone" placeholder=" "
+                                class="field-input w-full border border-border rounded-lg px-3 text-sm text-txt-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition bg-white h-12" />
+                            <label for="phone" class="field-label">Phone Number</label>
+                        </div>
+
+                        <div class="field-wrapper">
+                            <input id="location" type="text" x-model="form.location" placeholder=" "
+                                class="field-input w-full border border-border rounded-lg px-3 text-sm text-txt-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition bg-white h-12" />
+                            <label for="location" class="field-label">Location</label>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div class="bg-card border border-border rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-5 pb-4 border-b border-border">
+                        <h2 class="text-sm font-semibold text-txt-primary">Professional Summary <span
+                                class="text-danger">*</span></h2>
+                        <span class="text-xs text-txt-muted" x-text="charCount('summary', 500)">0 / 500</span>
+                    </div>
+                    <div class="field-wrapper">
+                        <textarea id="summary" x-model="form.summary" placeholder=" " maxlength="500" rows="4"
+                            class="field-input w-full border border-border rounded-lg px-3 text-sm text-txt-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition bg-white resize-none"></textarea>
+                        <label for="summary" class="field-label">Describe your professional background and
+                            goals...</label>
+                    </div>
+                </div>
+
+                <!-- Experience -->
+                <div class="bg-card border border-border rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-5 pb-4 border-b border-border">
+                        <h2 class="text-sm font-semibold text-txt-primary">Work Experience</h2>
+                        <span class="text-xs text-txt-muted" x-text="charCount('experience', 2000)">0 / 2000</span>
+                    </div>
+                    <div class="field-wrapper">
+                        <textarea id="experience" x-model="form.experience" placeholder=" " maxlength="2000" rows="6"
+                            class="field-input w-full border border-border rounded-lg px-3 text-sm text-txt-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition bg-white resize-none"></textarea>
+                        <label for="experience" class="field-label">List your roles, companies, dates, and key
+                            achievements...</label>
+                    </div>
+                </div>
+
+                <!-- Education -->
+                <div class="bg-card border border-border rounded-xl p-6">
+                    <h2 class="text-sm font-semibold text-txt-primary mb-5 pb-4 border-b border-border">Education</h2>
+                    <div class="field-wrapper">
+                        <textarea id="education" x-model="form.education" placeholder=" " rows="4"
+                            class="field-input w-full border border-border rounded-lg px-3 text-sm text-txt-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition bg-white resize-none"></textarea>
+                        <label for="education" class="field-label">Degrees, institutions, graduation years...</label>
+                    </div>
+                </div>
+
+                <!-- Skills -->
+                <div class="bg-card border border-border rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-5 pb-4 border-b border-border">
+                        <h2 class="text-sm font-semibold text-txt-primary">Skills <span class="text-danger">*</span>
+                        </h2>
+                        <span class="text-xs text-txt-muted" x-text="charCount('skills', 500)">0 / 500</span>
+                    </div>
+                    <div class="field-wrapper">
+                        <textarea id="skills" x-model="form.skills" placeholder=" " maxlength="500" rows="3"
+                            class="field-input w-full border border-border rounded-lg px-3 text-sm text-txt-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition bg-white resize-none"></textarea>
+                        <label for="skills" class="field-label">Python, React, SQL, project management,
+                            leadership...</label>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <button id="generateBtn" @click="submit()" :disabled="loading"
+                    class="w-full flex items-center justify-center gap-3 bg-brand text-white font-semibold py-3.5 rounded-lg hover:bg-brand-dark transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 mt-2 text-sm shadow-sm">
+                    <svg x-show="loading"
+                        class="spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                        viewBox="0 0 24 24"></svg>
+                    <span x-text="loading ? 'Generating...' : 'Generate Resume'"></span>
+                </button>
+
+            </div>
+
+            <!-- ──── RIGHT: Live Preview ──── -->
+            <div class="lg:col-span-2">
+                <div class="bg-card border border-border rounded-xl p-6 sticky top-24 fade-slide"
+                    style="animation-delay: 0.15s">
+                    <div class="flex items-center justify-between mb-4 pb-4 border-b border-border">
+                        <h3 class="text-sm font-semibold text-txt-primary">Preview</h3>
+                        <span class="text-xs text-txt-muted bg-surface px-2 py-1 rounded">Live</span>
+                    </div>
+                    <div class="space-y-4 text-sm">
+                        <div>
+                            <p class="text-xl font-semibold text-txt-primary" x-text="form.name || 'Your Name'"></p>
+                            <p class="text-txt-secondary text-xs mt-0.5 space-x-2">
+                                <span x-show="form.email" x-text="form.email"></span>
+                                <span x-show="form.phone" x-text="' · ' + form.phone"></span>
+                                <span x-show="form.location" x-text="' · ' + form.location"></span>
+                            </p>
+                        </div>
+                        <div x-show="form.summary" class="border-t border-border pt-4">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-txt-muted mb-2">Summary</p>
+                            <p class="text-txt-secondary text-xs leading-relaxed" x-text="form.summary"></p>
+                        </div>
+                        <div x-show="form.experience" class="border-t border-border pt-4">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-txt-muted mb-2">Experience</p>
+                            <p class="text-txt-secondary text-xs leading-relaxed whitespace-pre-line"
+                                x-text="form.experience"></p>
+                        </div>
+                        <div x-show="form.education" class="border-t border-border pt-4">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-txt-muted mb-2">Education</p>
+                            <p class="text-txt-secondary text-xs leading-relaxed" x-text="form.education"></p>
+                        </div>
+                        <div x-show="form.skills" class="border-t border-border pt-4">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-txt-muted mb-2">Skills</p>
+                            <p class="text-txt-secondary text-xs leading-relaxed" x-text="form.skills"></p>
+                        </div>
+                        <div x-show="!form.name && !form.summary && !form.skills" class="text-center py-8">
+                            <p class="text-txt-muted text-xs">Start filling in the form to see your resume preview here.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="border-t border-border py-6 mt-8">
+        <div class="max-w-6xl mx-auto px-6">
+            <p class="text-xs text-txt-muted">This tool provides keyword-based ATS compatibility analysis. It does not
+                guarantee recruiter outcomes.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

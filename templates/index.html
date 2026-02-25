@@ -1,31 +1,242 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AI-powered Resume Builder and ATS Compatibility Analyzer. Upload your resume and job description to get an instant ATS score.">
-    <title>AI Resume Builder &amp; ATS Analyzer</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a; color: #e2e8f0;
-            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description"
+        content="AI Career Toolkit — Optimize your resume with intelligent ATS keyword analysis and a structured resume builder." />
+    <title>AI Career Toolkit — Premium ATS Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { inter: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { DEFAULT: '#2563EB', dark: '#1D4ED8', light: '#EFF6FF' },
+                        surface: '#F9FAFB',
+                        card: '#FFFFFF',
+                        border: '#E5E7EB',
+                        txt: { primary: '#111827', secondary: '#6B7280', muted: '#9CA3AF' },
+                        success: '#16A34A', warning: '#D97706', danger: '#DC2626'
+                    }
+                }
+            }
         }
-        .container { max-width: 540px; text-align: center; padding: 2rem; }
-        h1 { font-size: 2rem; margin-bottom: 0.5rem; color: #f8fafc; }
-        p { color: #94a3b8; margin-bottom: 1.5rem; }
-        .status-badge {
-            display: inline-block; padding: 0.4rem 1.2rem; border-radius: 999px;
-            background: #065f46; color: #6ee7b7; font-size: 0.85rem; font-weight: 600;
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-out both;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .btn-scale {
+            transition: transform 0.2s;
+        }
+
+        .btn-scale:hover {
+            transform: scale(1.02);
+        }
+
+        .btn-scale:active {
+            transform: scale(0.98);
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>AI Resume Builder &amp; ATS Analyzer</h1>
-        <p>Upload your resume and job description to receive an instant ATS compatibility score.</p>
-        <span class="status-badge">&#x2713; API Online</span>
-    </div>
+
+<body class="bg-surface text-txt-primary antialiased" x-data="{ showUpload: false }">
+
+    <!-- ── Navbar ── -->
+    <nav class="bg-card border-b border-border sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="/" class="text-txt-primary font-semibold text-lg tracking-tight">AI Career Toolkit</a>
+            <div class="flex items-center gap-8">
+                <a href="/builder" class="text-sm text-txt-secondary hover:text-txt-primary transition-colors">Build
+                    Resume</a>
+                <a href="#analyze" class="text-sm text-txt-secondary hover:text-txt-primary transition-colors">Analyze
+                    Resume</a>
+                <a href="/builder"
+                    class="bg-brand text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-brand-dark transition-all btn-scale shadow-sm">Get
+                    Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── Hero ── -->
+    <section class="max-w-6xl mx-auto px-6 pt-24 pb-24 overflow-hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+            <div class="fade-in">
+                <h1 class="text-5xl font-semibold text-txt-primary leading-[1.15] tracking-tight mb-6">
+                    Optimize Your Resume With Intelligent ATS Analysis
+                </h1>
+                <p class="text-txt-secondary text-lg leading-relaxed mb-10 max-w-md">
+                    Stop guessing. Our engine analyzes your resume for keyword similarity, skill coverage, and
+                    formatting to ensure you pass automated filters.
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    <a href="#analyze"
+                        class="bg-brand text-white text-sm font-semibold px-8 py-4 rounded-lg hover:bg-brand-dark transition-all btn-scale shadow-sm">
+                        Analyze Resume
+                    </a>
+                    <a href="/builder"
+                        class="bg-card text-txt-primary text-sm font-semibold px-8 py-4 rounded-lg border border-border hover:border-gray-400 transition-all btn-scale">
+                        Build Resume
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right: Preview Mockup -->
+            <div class="hidden lg:block fade-in" style="animation-delay: 0.2s">
+                <div class="bg-card border border-border rounded-xl shadow-xl p-8 relative">
+                    <div
+                        class="absolute -top-4 -right-4 bg-success text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest shadow-lg">
+                        Live Preview</div>
+                    <div class="flex items-center justify-between mb-8 pb-4 border-b border-border">
+                        <span class="text-xs font-bold text-txt-muted uppercase tracking-widest">ATS Report</span>
+                        <span class="text-xs font-semibold text-brand bg-brand-light px-2 py-1 rounded">Score:
+                            88%</span>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-brand rounded-full w-[88%]"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="h-12 bg-surface border border-border rounded-lg"></div>
+                            <div class="h-12 bg-surface border border-border rounded-lg"></div>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="h-3 w-3/4 bg-gray-100 rounded"></div>
+                            <div class="h-3 w-1/2 bg-gray-100 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Analysis Section ── -->
+    <section id="analyze" class="border-t border-border bg-card py-24">
+        <div class="max-w-4xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-semibold text-txt-primary mb-4">Start Your Analysis</h2>
+                <p class="text-txt-secondary max-w-md mx-auto">Upload your resume and paste the job description to get a
+                    structured compatibility report.</p>
+            </div>
+
+            <form action="/analyze" method="POST" enctype="multipart/form-data" class="space-y-8"
+                x-data="{ loading: false }">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Resume Upload -->
+                    <div class="space-y-4">
+                        <label class="block text-sm font-semibold text-txt-primary">Upload Resume (PDF)</label>
+                        <div class="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-brand hover:bg-brand-light transition-all cursor-pointer relative"
+                            @click="$refs.fileInput.click()">
+                            <input type="file" name="resume" x-ref="fileInput" accept=".pdf" class="hidden" required
+                                @change="$refs.fileName.innerText = $event.target.files[0].name" />
+                            <svg class="w-10 h-10 text-txt-muted mx-auto mb-4" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <span class="text-sm text-txt-secondary" x-ref="fileName">Click to upload or drag and
+                                drop</span>
+                        </div>
+                    </div>
+
+                    <!-- JD Input -->
+                    <div class="space-y-4">
+                        <label class="block text-sm font-semibold text-txt-primary">Job Description</label>
+                        <textarea name="jd_text" placeholder="Paste the job requirements here..."
+                            class="w-full h-[152px] bg-white border border-border rounded-lg p-4 text-sm text-txt-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition"
+                            required></textarea>
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" @click="loading = true"
+                        class="w-full flex items-center justify-center gap-3 bg-brand text-white font-semibold py-4 rounded-lg hover:bg-brand-dark transition-all btn-scale shadow-sm disabled:opacity-50"
+                        :disabled="loading">
+                        <template x-if="loading">
+                            <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
+                        </template>
+                        <span x-text="loading ? 'Analyzing Compatibility...' : 'Analyze Compatibility'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- ── Features ── -->
+    <section class="border-t border-border py-24">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                <div class="space-y-4">
+                    <div
+                        class="w-12 h-12 bg-brand-light rounded-lg flex items-center justify-center text-brand font-bold text-xl">
+                        1</div>
+                    <h3 class="font-bold text-txt-primary">Resume Builder</h3>
+                    <p class="text-sm text-txt-secondary leading-relaxed">Create a professionally structured resume
+                        using our guided templates designed for ATS readability.</p>
+                </div>
+                <div class="space-y-4">
+                    <div
+                        class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center text-success font-bold text-xl">
+                        2</div>
+                    <h3 class="font-bold text-txt-primary">ATS Score</h3>
+                    <p class="text-sm text-txt-secondary leading-relaxed">Instantly identify how well your profile
+                        matches the employer's specific requirements with a weighted 0–100 score.</p>
+                </div>
+                <div class="space-y-4">
+                    <div
+                        class="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center text-warning font-bold text-xl">
+                        3</div>
+                    <h3 class="font-bold text-txt-primary">Feedback</h3>
+                    <p class="text-sm text-txt-secondary leading-relaxed">Receive actionable suggestions and a list of
+                        missing keywords to tailor your application strategically.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Footer ── -->
+    <footer class="border-t border-border py-12">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <span class="text-sm text-txt-muted">&copy; 2026 AI Career Toolkit. Professional SaaS Suite.</span>
+            <div class="flex gap-6">
+                <a href="#" class="text-xs text-txt-muted hover:text-txt-primary transition-colors">Privacy Policy</a>
+                <a href="#" class="text-xs text-txt-muted hover:text-txt-primary transition-colors">Terms of Use</a>
+            </div>
+        </div>
+    </footer>
+
 </body>
+
 </html>

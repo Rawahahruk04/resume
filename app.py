@@ -355,6 +355,15 @@ def create_app() -> Flask:
     def index():
         return render_template("index.html")
 
+    @app.route("/builder", methods=["GET"])
+    def builder():
+        return render_template("builder.html")
+
+    @app.route("/result", methods=["GET"])
+    def result_page():
+        # This route allows direct access or preview of the result template
+        return render_template("result.html", analysis=None)
+
     @app.route("/health", methods=["GET"])
     def health():
         return jsonify({"status": "ok", "service": "AI Resume Builder"}), 200
@@ -539,7 +548,15 @@ def create_app() -> Flask:
             return _error("Analysis failed due to an internal error. Please try again.", 500)
 
         if result_container:
-            return result_container[0]
+            # Multi-page flow: render the result dashboard template
+            # Note: You can also return JSON if the client asks for it, 
+            # but for this SaaS demo we return the full result page.
+            resp, status = result_container[0]
+            if status == 200:
+                # Extract the data from the JSON response object to pass to template
+                data = resp.get_json()
+                return render_template("result.html", analysis=data["analysis"])
+            return resp, status
 
         return _error("Analysis produced no result. Please try again.", 500)
 

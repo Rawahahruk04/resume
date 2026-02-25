@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" x-data="{ 
+    score: {{ analysis.final_score if analysis else 85 }}, 
+    animatedScore: 0,
+    isLoaded: false
+}" x-init="
+    setTimeout(() => {
+        isLoaded = true;
+        let start = 0;
+        let end = score;
+        let duration = 1500;
+        let startTime = null;
+        function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            let progress = Math.min((timestamp - startTime) / duration, 1);
+            animatedScore = Math.floor(progress * end);
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        }
+        window.requestAnimationFrame(step);
+    }, 100);
+">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analysis Result — AI Career Toolkit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { inter: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { DEFAULT: '#2563EB', dark: '#1D4ED8', light: '#EFF6FF' },
+                        surface: '#F9FAFB',
+                        card: '#FFFFFF',
+                        border: '#E5E7EB',
+                        txt: { primary: '#111827', secondary: '#6B7280', muted: '#9CA3AF' },
+                        success: '#16A34A', warning: '#D97706', danger: '#DC2626'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .score-circle {
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.6s ease-out;
+        }
+
+        .fade-in.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body class="bg-surface text-txt-primary antialiased">
+
+    <!-- ── Navbar ── -->
+    <nav class="bg-card border-b border-border sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="/" class="text-txt-primary font-semibold text-lg tracking-tight">AI Career Toolkit</a>
+            <div class="flex items-center gap-6">
+                <a href="/" class="text-sm text-txt-secondary hover:text-txt-primary transition-colors">Analyzer</a>
+                <a href="/builder"
+                    class="text-sm text-txt-secondary hover:text-txt-primary transition-colors">Builder</a>
+                <a href="/"
+                    class="bg-brand text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-brand-dark transition-all">New
+                    Analysis</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-6 py-12">
+        <!-- ── Top Section: Score ── -->
+        <div class="flex flex-col items-center text-center mb-16">
+            <div class="relative w-48 h-48 mb-6">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    <!-- Background Circle -->
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#E5E7EB" stroke-width="8" />
+                    <!-- Progress Circle -->
+                    <circle cx="50" cy="50" r="45" fill="none"
+                        :stroke="score >= 80 ? '#16A34A' : (score >= 60 ? '#D97706' : '#DC2626')" stroke-width="8"
+                        stroke-dasharray="282.7" :stroke-dashoffset="282.7 - (282.7 * animatedScore / 100)"
+                        stroke-linecap="round" class="score-circle" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="text-5xl font-bold tracking-tighter" x-text="animatedScore">0</span>
+                    <span class="text-sm font-medium text-txt-secondary">ATS Score</span>
+                </div>
+            </div>
+            <h1 class="text-2xl font-semibold text-txt-primary mb-2">Analysis Complete</h1>
+            <p class="text-txt-secondary max-w-lg mx-auto">
+                {{ analysis.grade_description if analysis else 'Your resume has been analyzed against the job
+                description. See the breakdown below for specific improvements.' }}
+            </p>
+        </div>
+
+        <!-- ── Metric Cards ── -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {% set metrics = [
+            ('Keyword Similarity', analysis.sub_scores.keyword_similarity if analysis else 91, 'Measures how well your
+            resume language aligns with the JD.'),
+            ('Skill Coverage', analysis.sub_scores.skill_coverage if analysis else 78, 'Identifies specific technical
+            and soft skills requested.'),
+            ('Formatting', analysis.sub_scores.section_completeness if analysis else 100, 'Checks for standard headers
+            like Experience and Education.'),
+            ('Word Count', analysis.sub_scores.length_quality if analysis else 85, 'Evaluates if the length is optimal
+            for recruiter screening.'),
+            ('Impact Verbs', analysis.sub_scores.action_verbs_score if analysis else 72, 'Analyzes the use of strong
+            action-oriented language.')
+            ] %}
+
+            {% for title, value, desc in metrics %}
+            <div class="bg-card border border-border rounded-xl p-6 shadow-sm fade-in" :class="isLoaded && 'active'"
+                style="transition-delay: {{ loop.index0 * 100 }}ms">
+                <div class="flex justify-between items-center mb-1">
+                    <h3 class="text-sm font-semibold text-txt-primary">{{ title }}</h3>
+                    <span
+                        class="text-sm font-bold {{ 'text-success' if value >= 80 else ('text-warning' if value >= 60 else 'text-danger') }}">{{
+                        value|round|int }}%</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-4">
+                    <div class="h-full rounded-full transition-all duration-1000"
+                        style="width: {{ value }}%; background-color: {{ '#16A34A' if value >= 80 else ('#D97706' if value >= 60 else '#DC2626') }}">
+                    </div>
+                </div>
+                <p class="text-xs text-txt-secondary leading-relaxed">{{ desc }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- ── Detailed Feedback ── -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Missing Skills -->
+            <div class="bg-card border border-border rounded-xl p-8 shadow-sm">
+                <h3 class="text-sm font-bold text-txt-primary uppercase tracking-wider mb-6 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Missing Key Terms
+                </h3>
+                <div class="flex flex-wrap gap-2">
+                    {% if analysis and analysis.diagnostics.missing_skills %}
+                    {% for skill in analysis.diagnostics.missing_skills[:15] %}
+                    <span
+                        class="px-3 py-1 bg-red-50 text-danger border border-red-100 rounded-lg text-xs font-medium">{{
+                        skill }}</span>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-sm text-txt-muted italic">Great job! No critical skills are missing based on this JD.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Improvement Suggestions -->
+            <div class="bg-card border border-border rounded-xl p-8 shadow-sm">
+                <h3 class="text-sm font-bold text-txt-primary uppercase tracking-wider mb-6 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Strategic Suggestions
+                </h3>
+                <ul class="space-y-4">
+                    {% if analysis %}
+                    {% if analysis.sub_scores.keyword_similarity < 70 %} <li class="flex items-start gap-3">
+                        <div class="w-1.5 h-1.5 rounded-full bg-brand mt-1.5 shrink-0"></div>
+                        <p class="text-sm text-txt-secondary">Integrate more context-specific keywords from the JD into
+                            your Experience bullets.</p>
+                        </li>
+                        {% endif %}
+                        {% if analysis.sub_scores.action_verbs_score < 70 %} <li class="flex items-start gap-3">
+                            <div class="w-1.5 h-1.5 rounded-full bg-brand mt-1.5 shrink-0"></div>
+                            <p class="text-sm text-txt-secondary">Start your experience bullets with stronger action
+                                verbs like "Spearheaded", "Architected", or "Orchestrated".</p>
+                            </li>
+                            {% endif %}
+                            {% if 'projects' in analysis.diagnostics.missing_sections %}
+                            <li class="flex items-start gap-3">
+                                <div class="w-1.5 h-1.5 rounded-full bg-brand mt-1.5 shrink-0"></div>
+                                <p class="text-sm text-txt-secondary">Add a "Projects" section to highlight hands-on
+                                    work if you have relevant portfolio items.</p>
+                            </li>
+                            {% endif %}
+                            {% endif %}
+                            <li class="flex items-start gap-3">
+                                <div class="w-1.5 h-1.5 rounded-full bg-brand mt-1.5 shrink-0"></div>
+                                <p class="text-sm text-txt-secondary">Quantify your achievements with data (e.g.,
+                                    "Increased revenue by 20%").</p>
+                            </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Disclaimer -->
+        <p class="text-center text-[10px] text-txt-muted mt-16 max-w-md mx-auto leading-relaxed">
+            This tool provides keyword-based ATS compatibility analysis. It is designed to help you align with automated
+            screening filters but does not guarantee recruiter outcomes or human evaluation success.
+        </p>
+    </main>
+
+    <footer class="border-t border-border py-8 mt-12">
+        <div class="max-w-5xl mx-auto px-6 text-center">
+            <span class="text-sm text-txt-muted">&copy; 2026 AI Career Toolkit. Professional SaaS Interface.</span>
+        </div>
+    </footer>
+
+</body>
+
+</html>
