@@ -187,54 +187,6 @@ def _is_rate_limited(ip: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Timeout decorator — with cancellation flag (C1, C4 fixes)
-# ---------------------------------------------------------------------------
-
-
-def _timeout_guard(seconds: int) -> Callable:
-    """Decorator that returns a 503 JSON response if handler exceeds *seconds*.
-
-    C1 fix: sets a cancellation Event so the worker thread can check it and
-    exit early instead of running to completion after timeout.
-
-    C4 fix: request data (form fields, file bytes) is captured in the main
-    request thread before spawning the worker thread, avoiding Flask's
-    thread-local request proxy issues.
-    """
-
-    def decorator(fn: Callable) -> Callable:
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            result_container: list = []
-            exception_container: list = []
-            cancel_event = threading.Event()
-
-            def target():
-                try:
-                    result_container.append(fn(*args, cancel_event=cancel_event, **kwargs))
-                except Exception as exc:  # noqa: BLE001
-                    exception_container.append(exc)
-
-            thread = threading.Thread(target=target, daemon=True)
-            thread.start()
-            thread.join(timeout=seconds)
-
-            if thread.is_alive():
-                # C1 fix: signal the worker to stop processing
-                cancel_event.set()
-                logger.error("Request timed out after %ds: %s", seconds, fn.__name__)
-                return _error("Request timed out. Please try a smaller file.", 503)
-
-            if exception_container:
-                raise exception_container[0]
-
-            return result_container[0]
-
-        return wrapper
-    return decorator
-
-
-# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -315,6 +267,17 @@ def create_app() -> Flask:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' fonts.googleapis.com cdn.tailwindcss.com; "
+            "font-src 'self' fonts.gstatic.com; "
+            "img-src 'self' data:; "
+            "connect-src 'self';"
+        )
+        if os.environ.get("RENDER"):
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
         logger.info(
             "%s %s %s → %d",
             _get_client_ip(),
@@ -369,42 +332,75 @@ def create_app() -> Flask:
         return jsonify({"status": "ok", "service": "AI Resume Builder"}), 200
 
     @app.route("/build-resume", methods=["POST"])
-    @_timeout_guard(REQUEST_TIMEOUT_SECONDS)
-    def build_resume(cancel_event: threading.Event | None = None):
+    def build_resume():
         """
         Accept JSON with resume field names/values and return
         a structured resume data payload for frontend rendering.
         """
+        # C4 fix: read body in main thread
         data = request.get_json(silent=True)
         if not data or not isinstance(data, dict):
             return _error("Request body must be valid JSON.")
 
-        required_fields = ["name", "summary", "skills"]
-        missing = [f for f in required_fields if not data.get(f, "").strip()]
-        if missing:
-            return _error(f"Missing required fields: {', '.join(missing)}.")
+        # ── Run logic in timeout-guarded thread ───────────────────────────
+        result_container: list = []
+        exception_container: list = []
+        cancel_event = threading.Event()
 
-        try:
-            validated_summary = validate_text_input(data.get("summary", ""), "summary")
-            validated_skills = validate_text_input(data.get("skills", ""), "skills")
-        except ValidationError as exc:
-            return _error(str(exc))
+        def _build_worker():
+            try:
+                required_fields = ["name", "summary", "skills"]
+                missing = [f for f in required_fields if not data.get(f, "").strip()]
+                if missing:
+                    result_container.append(_error(f"Missing required fields: {', '.join(missing)}."))
+                    return
 
-        resume_payload = {
-            "success": True,
-            "resume": {
-                "name": clean_text(str(data.get("name", ""))),
-                "email": clean_text(str(data.get("email", ""))),
-                "phone": str(data.get("phone", "")).strip(),
-                "summary": validated_summary,
-                "experience": clean_text(str(data.get("experience", ""))),
-                "education": clean_text(str(data.get("education", ""))),
-                "skills": validated_skills,
-            },
-        }
+                try:
+                    validated_summary = validate_text_input(data.get("summary", ""), "summary")
+                    validated_skills = validate_text_input(data.get("skills", ""), "skills")
+                except ValidationError as exc:
+                    result_container.append(_error(str(exc)))
+                    return
 
-        logger.info("Resume built for: %s", data.get("name", "unknown"))
-        return jsonify(resume_payload), 200
+                # C1 check
+                if cancel_event.is_set():
+                    return
+
+                resume_payload = {
+                    "success": True,
+                    "resume": {
+                        "name": clean_text(str(data.get("name", ""))),
+                        "email": clean_text(str(data.get("email", ""))),
+                        "phone": str(data.get("phone", "")).strip(),
+                        "location": clean_text(str(data.get("location", ""))),
+                        "summary": validated_summary,
+                        "experience": clean_text(str(data.get("experience", ""))),
+                        "education": clean_text(str(data.get("education", ""))),
+                        "skills": validated_skills,
+                    },
+                }
+                result_container.append((jsonify(resume_payload), 200))
+                logger.info("Resume built for: %s", data.get("name", "unknown"))
+
+            except Exception as exc:
+                logger.exception("Unhandled error during resume building: %s", exc)
+                exception_container.append(exc)
+
+        thread = threading.Thread(target=_build_worker, daemon=True)
+        thread.start()
+        thread.join(timeout=REQUEST_TIMEOUT_SECONDS)
+
+        if thread.is_alive():
+            cancel_event.set()
+            return _error("Request timed out.", 503)
+
+        if exception_container:
+            return _error("Internal server error.", 500)
+
+        if result_container:
+            return result_container[0]
+
+        return _error("Processing failed.", 500)
 
     @app.route("/analyze", methods=["POST"])
     def analyze():
